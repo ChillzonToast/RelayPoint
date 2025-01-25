@@ -4,6 +4,16 @@ import dotenv,os
 import psycopg2
 import random
 import json
+import base64
+
+def binary_to_base64(binary_data, mime_type):
+    # Encode binary data to Base64
+    base64_data = base64.b64encode(binary_data).decode('utf-8')
+    
+    # Format as a Data URI
+    data_uri = f"data:{mime_type};base64,{base64_data}"
+    return data_uri
+
 
 dotenv.load_dotenv()
 psql_password=os.getenv("POSTGRESQL_PASSWORD")
@@ -105,7 +115,6 @@ def pgUserAddEvents(username:str,secret_key:str,events):
     else:
         return {"status_code":404,"message":"Forbidden"}
 
-
 def pgAuthorizeCreateEvent(username,secret_key):
     cursor.execute("SELECT * FROM users WHERE username=%s;",(username,))
     users=cursor.fetchall()
@@ -200,7 +209,62 @@ def pgAwardPoints(organizerUsername,secret_key,studentUsername,eventId,points):
     else:
         return {"status_code":404,"message":"Forbidden"}
     
+def pgAddOrganizers(creatorUsername,secret_key,eventId,organizers:list):
+    cursor.execute("SELECT * FROM users WHERE username=%s;",(creatorUsername,))
+    users=cursor.fetchall()
+    if users[0][3]==secret_key:
+        cursor.execute("SELECT created_events_ids FROM user_stats WHERE username=%s;",(creatorUsername,))
+        if eventId in cursor.fetchall()[0][0]:
+            cursor.execute("UPDATE events SET organizers=organizers || %s WHERE id=%s;",(organizers,eventId))
+            conn.commit()
+            return {"status_code":200,"message":"Ok"}
+        else:
+            return {"status_code":404,"message":"Only Creators can add organizers"}
+    else:
+        return {"status_code":404,"message":"Forbidden"}
 
+def pointsTotal(points):
+    sum=0
+    if points==None:
+        return 0
+    for event in points:
+        sum+=event["points"]
+    return sum
+
+def pgRanklist():
+    cursor.execute("SELECT * FROM user_stats;")
+    users=cursor.fetchall()
+    return sorted(users,key=lambda i:pointsTotal(i[3]),reverse=True)
+
+def pgGetRank(username:str):
+    RL=pgRanklist()
+    for i in range(len(RL)):
+        if RL[i][0]==username:
+            return i+1
+
+def pgGetRecentEvents(username,secret_key):
+    cursor.execute("SELECT * FROM users WHERE username=%s;",(username,))
+    users=cursor.fetchall()
+    if users[0][3]==secret_key:
+        cursor.execute("SELECT * FROM user_stats WHERE username=%s;",(username,))
+        events=cursor.fetchone()[1]
+        if events==None:
+            return []
+        return events[::-1]
+    return False
+
+def pgGetEvent(id:int):
+    """
+        Returns tuple (id,title,description,category,date,imageids,organizers,access,registered_users)
+    """
+    cursor.execute("SELECT * FROM events WHERE id=%s;",(id,))
+    return cursor.fetchone()
+
+def pgGetImage(id:int):
+    cursor.execute("SELECT * FROM images WHERE id=%s",(id,))
+    image = cursor.fetchone()
+    return binary_to_base64(image[1],image[2])
+    
 # resp = pgLogin("Ibilees","Binubinu")
 
 # if pgAuthorizeCreateEvent("Ibilees",resp["secret_key"]):
@@ -227,10 +291,10 @@ def pgAwardPoints(organizerUsername,secret_key,studentUsername,eventId,points):
 # print(pgCreateUser("Jissykutty","Binaryboys@123",["organizer"]))
 # print(pgCreateUser("Shalumol","iloveibinu",["organizer"]))
 # print(pgCreateUser("Richu","Shiningstar",["cse-student"]))
-username="Ibilees"
-password="Binubinu"
-resp=pgLogin(username,password)
-print(pgRegisterEvent(username,resp["secret_key"],12))
-print(pgAwardPoints(username,resp["secret_key"],"Ibilees",12,10))
-pgLogout(username,resp["secret_key"])
-conn.close()
+if (__name__=='__main__'):
+    username="Jissykutty"
+    password="Binaryboys@123"
+    resp=pgLogin(username,password)
+    print(pgRanklist())
+    pgLogout(username,resp["secret_key"])
+    conn.close()
