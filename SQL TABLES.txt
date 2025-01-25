@@ -1,0 +1,21 @@
+SQL TABLES:
+
+Users - roles:
+	Username | Password (hashed) | Roles [admin/organizer,cse-student,fosscell-member]
+Users - stats:
+	Username | Upcoming Events ID | Completed Events ID | Created Events | Points
+Events:
+	ID | Title | Description | Category | Date | Images IDS | Organizers | Access 
+Images:
+	ID | Data
+	
+	
+event-acess=[cse-studnt,admin] 
+user_roles=[admin,cse-student,fosscell-member]
+
+if user in organizers:
+	enter
+else:
+	for role in user_roles:
+		if role in event-access:
+			enter
