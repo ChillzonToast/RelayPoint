@@ -229,7 +229,7 @@ def pointsTotal(points):
     if points==None:
         return 0
     for event in points:
-        sum+=event["points"]
+        sum+=int(event["points"])
     return sum
 
 def pgRanklist():
