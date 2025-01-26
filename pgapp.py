@@ -285,7 +285,7 @@ def pgGetPoints(username):
     if user[3]==None:
         return 0
     for i in user[3]:
-        points+=i["points"]
+        points+=int(i["points"])
     return points
 
 def pgPostBlog(username,secret_key,blog,time):
