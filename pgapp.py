@@ -5,6 +5,7 @@ import psycopg2
 import random
 import json
 import base64
+import datetime
 
 def binary_to_base64(binary_data, mime_type):
     # Encode binary data to Base64
@@ -253,6 +254,18 @@ def pgGetRecentEvents(username,secret_key):
         return events[::-1]
     return False
 
+def pgGetCreatedEvents(username,secret_key):
+    cursor.execute("SELECT * FROM users WHERE username=%s;",(username,))
+    users=cursor.fetchall()
+    if users[0][3]==secret_key:
+        cursor.execute("SELECT * FROM user_stats WHERE username=%s;",(username,))
+        events=cursor.fetchone()[2]
+        if events==None:
+            return []
+        return events[::-1]
+    return False
+
+
 def pgGetEvent(id:int):
     """
         Returns tuple (id,title,description,category,date,imageids,organizers,access,registered_users)
@@ -264,6 +277,27 @@ def pgGetImage(id:int):
     cursor.execute("SELECT * FROM images WHERE id=%s",(id,))
     image = cursor.fetchone()
     return binary_to_base64(image[1],image[2])
+
+def pgGetPoints(username):
+    cursor.execute("SELECT * FROM user_stats WHERE username=%s;",(username,))
+    user=cursor.fetchone()
+    points=0
+    if user[3]==None:
+        return 0
+    for i in user[3]:
+        points+=i["points"]
+    return points
+
+def pgPostBlog(username,secret_key,blog,time):
+    cursor.execute("SELECT * FROM users WHERE username=%s;",(username,))
+    users=cursor.fetchall()
+    if users[0][3]==secret_key:
+        cursor.execute("INSERT INTO community(username,blog,date) VALUES(%s,%s,%s)",(username,blog,time))
+        conn.commit()
+
+def pgGetBlogs():
+    cursor.execute("SELECT * FROM community ORDER BY date DESC;")
+    return cursor.fetchall()
     
 # resp = pgLogin("Ibilees","Binubinu")
 
@@ -295,6 +329,6 @@ if (__name__=='__main__'):
     username="Jissykutty"
     password="Binaryboys@123"
     resp=pgLogin(username,password)
-    print(pgRanklist())
+    print(pgPostBlog(username,resp["secret_key"],"I am gay",datetime.datetime.now()))
     pgLogout(username,resp["secret_key"])
     conn.close()

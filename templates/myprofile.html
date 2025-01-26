@@ -32,11 +32,11 @@
         </div>
       </a>
       <nav class="inria-sans-regular mx-5">
-        <a href="#">Events</a>
-        <a href="#">Leaderboard</a>
-        <a href="#">Community</a>
-        <a href="#">Workshops</a>
-        <a href="#">About Us</a>
+        <a href="/events">Events</a>
+        <a href="/leaderboard">Leaderboard</a>
+        <a href="/community">Community</a>
+        <a href="/workshops">Workshops</a>
+        <a href="/about">About Us</a>
         <a href="/create_event">Create Event</a>
       </nav>
     </div>
@@ -74,11 +74,18 @@
                         <dd class="value">{{rank}}</dd>
                     </div>
                 </dl>
-                <a href='/myevents'>
-                  <div class="my-events-section jomhuria-regular">
-                      <h2>My Events</h2>
-                  </div>
-                </a>
+                <div class="d-flex flex-row gap-5">
+                  <a href='/myevents'>
+                    <div class="my-events-section jomhuria-regular">
+                        <h2>My Events</h2>
+                    </div>
+                  </a>
+                  <a href='/logout'>
+                    <div class="my-events-section jomhuria-regular">
+                        <h2>Logout</h2>
+                    </div>
+                  </a>
+                </div>
             </div>
         </div>
     </section>
@@ -91,7 +98,7 @@
                 <img src="{{event[5]}}" alt="" class="workshop-image" width="400" height="179">
                 <div class="workshop-details">
                     <h3>{{event[1]}}</h3>
-                    <p>{{event[2]}}</p>
+                    <p>{{event[2][:250]+"..."}}</p>
                     <a href='/event/{{event[0]}}'>
                     <button class="workshop-details-btn" aria-label="View event details">View Details</button>
                     </a>

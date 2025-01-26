@@ -1,10 +1,41 @@
 from flask import Flask, request, jsonify, render_template,redirect,make_response
 import base64
 from datetime import datetime
+import qrcode
+from io import BytesIO
+import json
 
 import pgapp as pg
 
 app = Flask(__name__)
+
+def generate_qr(username, event_id):
+    try:
+        # Compact data in JSON format
+        data = json.dumps({"username": username, "event_id": event_id}, separators=(',', ':'))
+        
+        # Generate the QR Code
+        qr = qrcode.QRCode(
+            version=None,  # Auto-adjust version
+            error_correction=qrcode.constants.ERROR_CORRECT_H,  # High error correction
+            box_size=10,
+            border=4,
+        )
+        qr.add_data(data)
+        qr.make(fit=True)
+
+        # Create the QR image
+        img = qr.make_image(fill_color="black", back_color="white").convert("RGB")  # Convert to RGB for JPG
+
+        # Convert the image to base64 in JPG format
+        buffer = BytesIO()
+        img.save(buffer, format="JPEG")
+        buffer.seek(0)
+        img_base64 = base64.b64encode(buffer.read()).decode('utf-8')
+
+        return f"data:image/jpeg;base64,{img_base64}"
+    except Exception as e:
+        return f"Error generating QR code: {str(e)}"
 
 @app.route('/img_upload', methods=['POST'])
 def upload_image():
@@ -17,35 +48,49 @@ def upload_image():
     
 @app.route('/',methods=['GET'])
 def index():
-    if request.cookies.get("secret_key"):
-        username=request.cookies.get("username")
-        secret_key=request.cookies.get("secret_key")
-        pg.cursor.execute("SELECT * FROM user_stats WHERE username=%s;",(username,))
-        user=pg.cursor.fetchone()
-        points=0
-        for i in user[3]:
-            points+=i["points"]
-            
+    username=request.cookies.get("username")
+    secret_key=request.cookies.get("secret_key")
+    pg.cursor.execute("SELECT * FROM events ORDER BY date DESC;")
+    latest=pg.cursor.fetchall()[0]
+    if len(latest[5])==0:
+        latest=list(latest)
+        latest[5]="https://cdn.builder.io/api/v1/image/assets/TEMP/9d3041a297c47abe0747b9f55a58146e9ae55c83be378abf990f357e4b053464?placeholderIfAbsent=true&apiKey=2cbf1f5487444b28a9e58914868be763"
+        latest=tuple(latest)
+    else:
+        latest=list(latest)
+        latest[5]=pg.pgGetImage(latest[5][0])
+        latest=tuple(latest)
         current_datetime = datetime.now()
         formatted_datetime = str(current_datetime.strftime("%Y-%m-%d %H:%M:%S"))
 
-        upcoming_events=[]
-        for event_id in user[1]:
-            event=pg.pgGetEvent(event_id)
-            if str(event[4])>formatted_datetime:
-                upcoming_events.append(event)
-        upcoming_events=sorted(upcoming_events,key=lambda i:i[4])
+    upcoming_events=[]
+    pg.cursor.execute("SELECT * FROM events ORDER BY date DESC;")
+    
+    for event in pg.cursor.fetchall():
+        if str(event[4])>=formatted_datetime:
+            upcoming_events.append(event)
+        else:
+            break
+    
+    #get images
+    for i in range(len(upcoming_events)):
+        if (len(upcoming_events[i][5])==0):
+            upcoming_events[i]=list(upcoming_events[i])
+            upcoming_events[i][5]="https://cdn.builder.io/api/v1/image/assets/TEMP/9d3041a297c47abe0747b9f55a58146e9ae55c83be378abf990f357e4b053464?placeholderIfAbsent=true&apiKey=2cbf1f5487444b28a9e58914868be763"
+            upcoming_events[i]=tuple(upcoming_events[i])
+        else:
+            upcoming_events[i]=list(upcoming_events[i])
+            upcoming_events[i][5]=pg.pgGetImage(upcoming_events[i][5][0])
+            upcoming_events[i]=tuple(upcoming_events[i])    
+    
+    if request.cookies.get("secret_key"):
+        pg.cursor.execute("SELECT * FROM user_stats WHERE username=%s;",(username,))
+        user=pg.cursor.fetchone()
+        points=0
+        if user[3]!=None:
+            for i in user[3]:
+                points+=i["points"]
         
-        #get images
-        for i in range(len(upcoming_events)):
-            if (len(upcoming_events[i][5])==0):
-                upcoming_events[i]=list(upcoming_events[i])
-                upcoming_events[i][5]="https://cdn.builder.io/api/v1/image/assets/TEMP/9d3041a297c47abe0747b9f55a58146e9ae55c83be378abf990f357e4b053464?placeholderIfAbsent=true&apiKey=2cbf1f5487444b28a9e58914868be763"
-                upcoming_events[i]=tuple(upcoming_events[i])
-            else:
-                upcoming_events[i]=list(upcoming_events[i])
-                upcoming_events[i][5]=pg.pgGetImage(upcoming_events[i][5][0])
-                upcoming_events[i]=tuple(upcoming_events[i])
                 
         registered_events=[]
         if secret_key!=None:
@@ -63,7 +108,6 @@ def index():
                 registered_events[i]=list(registered_events[i])
                 registered_events[i][5]=pg.pgGetImage(registered_events[i][5][0])
                 registered_events[i]=tuple(registered_events[i])
-        print(registered_events[0][5][:100])
         
         for i in range(len(registered_events)):
             date = registered_events[i][4]
@@ -72,16 +116,10 @@ def index():
             registered_events[i][4]=time_difference.days
             registered_events[i]=tuple(registered_events[i])
         
-        pg.cursor.execute("SELECT * FROM events ORDER BY date DESC;")
-        latest=pg.cursor.fetchall()[0]
-        if len(latest[5])==0:
-            latest=list(latest)
-            latest[5]="https://cdn.builder.io/api/v1/image/assets/TEMP/9d3041a297c47abe0747b9f55a58146e9ae55c83be378abf990f357e4b053464?placeholderIfAbsent=true&apiKey=2cbf1f5487444b28a9e58914868be763"
-            latest=tuple(latest)
-        else:
-            latest=list(latest)
-            latest[5]=pg.pgGetImage(latest[5][0])
-            latest=tuple(latest)
+        
+        if user[1]==None:
+            user=list(user)
+            user[1]=[]
         return render_template('index.html',
                                username=request.cookies.get("username"),
                                profile_link='/myprofile',
@@ -95,7 +133,9 @@ def index():
     else:
         return render_template('index.html',
                                username="Guest User",
-                               profile_link='/login')
+                               profile_link='/login',
+                               latest=latest,
+                               upcoming_events=upcoming_events)
 
 @app.route('/login',methods=["GET"])
 def login():
@@ -123,12 +163,17 @@ def apiLogin():
     else:
         return render_template('login.html',username="Guest User",profile_link='/login',message=resp['message'])
 
-@app.route('/api/logout',methods=["POST"])
-def apiLogout():
+@app.route('/api/signup',methods=["POST"])
+def apiSignup():
+    resp = pg.pgCreateUser(request.form['username'],request.form['password'],['student'])
+    return redirect('/login')
+
+@app.route('/logout',methods=["GET"])
+def logout():
     pg.pgLogout(request.cookies['username'],request.cookies['secret_key'])
     response = make_response(redirect('/login'))
-    response.set_cookie['secret_key',None]
-    response.set_cookie['username',None]
+    response.set_cookie('secret_key','',expires=0)
+    response.set_cookie('username','',expires=0)
     return response
 
 @app.route('/create_event',methods=['GET'])
@@ -180,8 +225,9 @@ def myprofile():
     pg.cursor.execute("SELECT * FROM user_stats WHERE username=%s;",(username,))
     user=pg.cursor.fetchone()
     points=0
-    for i in user[3]:
-        points+=i["points"]
+    if user[3]!=None:
+        for i in user[3]:
+            points+=i["points"]
     recent_events_ids=pg.pgGetRecentEvents(username,secret_key)
     if recent_events_ids==False:
         return redirect('/login')
@@ -199,10 +245,216 @@ def myprofile():
             recent_events[i]=list(recent_events[i])
             recent_events[i][5]=pg.pgGetImage(recent_events[i][5][0])
             recent_events[i]=tuple(recent_events[i])
-    return render_template('/myprofile.html',username=username,workshop_count=len(user[1]),points=points,rank=pg.pgGetRank(username),recent_events=recent_events)
+    if user[1]==None:
+        user=list(user)
+        user[1]=[]
+    return render_template('/myprofile.html',
+                           username=username,
+                           uprofile_rl='/myprofile',
+                           workshop_count=len(user[1]),
+                           points=points,rank=pg.pgGetRank(username),
+                           recent_events=recent_events)
+@app.route('/leaderboard',methods=["GET"])
+def leaderboard():
+    username = request.cookies.get('username')
+    secret_key= request.cookies.get('secret_key')
+    if username==None:
+        return redirect('/login')
+    LB=pg.pgRanklist()
+    for i in range(len(LB)):
+        LB[i]=list(LB[i])
+        LB[i][3]=pg.pgGetPoints(LB[i][0])
+    return render_template('/leaderboard.html',
+                           username=username,uprofile_rl='/myprofile',
+                           myrank=pg.pgGetRank(username),
+                           mypoints=pg.pgGetPoints(username), 
+                           myworkshops=len(pg.pgGetRecentEvents(username,secret_key)),
+                           LB=LB)
+
+@app.route('/events',methods=["GET"])
+def events():
+    category = request.args.get('category')
+    if category==None:
+        category=''
+    username=request.cookies.get('username')
+    if username==None:
+        username="Guest User"
+    pg.cursor.execute("SELECT * FROM events;")
+    current_datetime = datetime.now()
+    formatted_datetime = str(current_datetime.strftime("%Y-%m-%d %H:%M:%S"))
+    events=pg.cursor.fetchall()
+    upcoming_events=[]
+    for event in events:
+        if str(event[4])>formatted_datetime and category in event[3].lower():
+            upcoming_events.append(event)
+    upcoming_events=sorted(upcoming_events,key=lambda i:i[4],reverse=True)
+    for i in range(len(upcoming_events)):
+        if (len(upcoming_events[i][5])==0):
+            upcoming_events[i]=list(upcoming_events[i])
+            upcoming_events[i][5]="https://cdn.builder.io/api/v1/image/assets/TEMP/9d3041a297c47abe0747b9f55a58146e9ae55c83be378abf990f357e4b053464?placeholderIfAbsent=true&apiKey=2cbf1f5487444b28a9e58914868be763"
+            upcoming_events[i]=tuple(upcoming_events[i])
+        else:
+            upcoming_events[i]=list(upcoming_events[i])
+            upcoming_events[i][5]=pg.pgGetImage(upcoming_events[i][5][0])
+            upcoming_events[i]=tuple(upcoming_events[i])
+    return render_template('events.html',
+                           username=username,
+                           profile_link="/myprofile" if username!="Guest User" else "/login",
+                           upcoming_events=upcoming_events,
+                           selected_category=category.lower() if category!='' else 'all')
+
+@app.route('/myevents',methods=["GET"])
+def myevents():
+    username=request.cookies.get('username')
+    secret_key=request.cookies.get('secret_key')
+    if username==None:
+        username="Guest User"
+    my_events=[]
+    if secret_key!=None:
+        for event_id in pg.pgGetCreatedEvents(username,secret_key):
+            event = pg.pgGetEvent(event_id)
+            my_events.append(event)
+    for i in range(len(my_events)):
+        if (len(my_events[i][5])==0):
+            my_events[i]=list(my_events[i])
+            my_events[i][5]="https://cdn.builder.io/api/v1/image/assets/TEMP/9d3041a297c47abe0747b9f55a58146e9ae55c83be378abf990f357e4b053464?placeholderIfAbsent=true&apiKey=2cbf1f5487444b28a9e58914868be763"
+            my_events[i]=tuple(my_events[i])
+        else:
+            my_events[i]=list(my_events[i])
+            my_events[i][5]=pg.pgGetImage(my_events[i][5][0])
+            my_events[i]=tuple(my_events[i])
+    return render_template('myEvents.html',
+                           username=username,
+                           profile_link="/myprofile" if username!="Guest User" else "/login",
+                           my_events=my_events)
+
+@app.route('/workshops',methods=["GET"])
+def workshops():
+    username=request.cookies.get('username')
+    if username==None:
+        username="Guest User"
+    pg.cursor.execute("SELECT * FROM events;")
+    current_datetime = datetime.now()
+    formatted_datetime = str(current_datetime.strftime("%Y-%m-%d %H:%M:%S"))
+    events=pg.cursor.fetchall()
+    upcoming_events=[]
+    for event in events:
+        if str(event[4])>formatted_datetime:
+            upcoming_events.append(event)
+    upcoming_events=sorted(upcoming_events,key=lambda i:i[4])
+    for i in range(len(upcoming_events)):
+        if (len(upcoming_events[i][5])==0):
+            upcoming_events[i]=list(upcoming_events[i])
+            upcoming_events[i][5]="https://cdn.builder.io/api/v1/image/assets/TEMP/9d3041a297c47abe0747b9f55a58146e9ae55c83be378abf990f357e4b053464?placeholderIfAbsent=true&apiKey=2cbf1f5487444b28a9e58914868be763"
+            upcoming_events[i]=tuple(upcoming_events[i])
+        else:
+            upcoming_events[i]=list(upcoming_events[i])
+            upcoming_events[i][5]=pg.pgGetImage(upcoming_events[i][5][0])
+            upcoming_events[i]=tuple(upcoming_events[i])
+    
+    return render_template('workshops.html',
+                           username=username,
+                           profile_link="/myprofile" if username!="Guest User" else "/login",
+                           upcoming_events=upcoming_events)
+
+@app.route('/about',methods=["GET"])
+def about():
+    return render_template('about.html')
+
+@app.route('/community',methods=["GET"])
+def community():
+    username=request.cookies.get('username')
+    if username==None:
+        return redirect('/login')
+    return render_template('community.html',username=username,profile_link='/myprofile',blogs=pg.pgGetBlogs())
+
+@app.route('/api/post_blog',methods=["POST"])
+def post_blog():
+    username=request.cookies.get('username')
+    secret_key=request.cookies.get('secret_key')
+    if username==None:
+        return redirect('/community')
+    pg.pgPostBlog(username,secret_key,request.form['blog'],datetime.now())
+    return redirect('/community')
+    
+@app.route('/event/<int:id>',methods=["GET"])
+def event(id):
+    username=request.cookies.get('username')
+    secret_key=request.cookies.get('secret_key')
+    if username==None:
+        return redirect('/login')
+    event=pg.pgGetEvent(id)     #(id,title,description,category,date,imageids,organizers,access,registered_users)
+    
+    #get image
+    if (len(event[5])==0):
+        event=list(event)
+        event[5]="https://cdn.builder.io/api/v1/image/assets/TEMP/9d3041a297c47abe0747b9f55a58146e9ae55c83be378abf990f357e4b053464?placeholderIfAbsent=true&apiKey=2cbf1f5487444b28a9e58914868be763"
+        event=tuple(event)
+    else:
+        event=list(event)
+        event[5]=pg.pgGetImage(event[5][0])
+        event=tuple(event)
+    
+    return render_template('eventDetails.html',
+                    username=(username  or "Guest User"),
+                    profile_link="/myprofile" if username=="Guest User" else "/login",
+                    event=event
+                    )
+    
+@app.route('/register/<int:id>',methods=["GET"])
+def register(id):
+    username=request.cookies.get('username')
+    secret_key=request.cookies.get('secret_key')
+    if username==None:
+        return redirect('/login')
+    event=pg.pgGetEvent(id)     #(id,title,description,category,date,imageids,organizers,access,registered_users)
+    resp = pg.pgRegisterEvent(username,secret_key,id)
+    alreadyRegistered=False if resp['status_code']==200 else True
+    #get image
+    if (len(event[5])==0):
+        event=list(event)
+        event[5]="https://cdn.builder.io/api/v1/image/assets/TEMP/9d3041a297c47abe0747b9f55a58146e9ae55c83be378abf990f357e4b053464?placeholderIfAbsent=true&apiKey=2cbf1f5487444b28a9e58914868be763"
+        event=tuple(event)
+    else:
+        event=list(event)
+        event[5]=pg.pgGetImage(event[5][0])
+        event=tuple(event)
+    
+    return render_template('register.html',
+                    username=username,
+                    profile_link="/myprofile" if username!="Guest User" else "/login",
+                    event=event,
+                    alreadyRegistered=alreadyRegistered,
+                    qr=generate_qr(username,id)
+                    )
+
+@app.route('/api/award',methods=["POST"])
+def apiAward():
+    username=request.cookies.get('username')
+    secret_key=request.cookies.get('secret_key')
+    if username==None:
+        return redirect('/login')
+    resp = pg.pgAwardPoints(username,secret_key,request.form['student-name'],request.form['event-id'],request.form['points'])
+    return redirect('/award/'+str(request.form['event-id']))
+
+@app.route('/award/<int:id>',methods=["GET"])
+def award(id):
+    username=request.cookies.get('username')
+    secret_key=request.cookies.get('secret_key')
+    registered_users=list(pg.pgGetEvent(id)[-1])
+    event=pg.pgGetEvent(id)
+    for i in range(len(registered_users)):
+        registered_users[i]=pg.pgUserFetch(registered_users[i])
+    return render_template('award.html',
+                           username=username,
+                           profile_link='myprofile',
+                           registered_users=registered_users,
+                           event_id=id,
+                           event=event
+                           )
 
 @app.route('/test',methods=["GET"])
 def test():
-    return render_template('myprofile.html')
+    return render_template('award.html')
 if __name__ == "__main__":
     app.run(debug=True)

@@ -47,27 +47,49 @@
       </div>
     </a>
   </header>
-
-  <main role="main">
-    <h1 class="page-title">LOGIN / SIGN UP</h1>
     
-    <section class="signup-container" aria-labelledby="signup-heading">
-        <h2 id="signup-heading" class="signup-title">SIGNUP</h2>
-        <form class="signup-form" action="/api/signup" method="POST">
-            <div class="form-group">
-                <label for="username">Username</label>
-                <input type="text" id="username" name="username" required aria-required="true">
+  <main role="main">
+    <div class="container">
+        <a href='/events'>
+        <button class="back-button" aria-label="Go back to previous page">
+          <div style="margin-top:-20px;margin-bottom:-35px;">
+            BACK
+          </div>
+          </button>
+        </a>
+        <h1>EVENT DETAILS</h1>
+
+        <img src="{{event[5]}}" alt="Event featured image" class="event-image">
+
+        <h2>{{event[1]}}</h2>
+
+        <p class="event-description">
+            {{event[2]}}
+        </p>
+
+        <div class="event-details-grid">
+            <div class="detail-item">
+                <h3>Date</h3>
+                <time datetime="2024-01-01">{{"{:02}".format(event[4].day)}}/{{"{:02}".format(event[4].month)}}/{{event[4].year}}</time>
             </div>
-            <div class="form-group">
-                <label for="password">Password</label>
-                <input type="password" id="password" name="password" required aria-required="true">
+            <div class="detail-item">
+                <h3>Time</h3>
+                <time datetime="14:00">{{"{:02}".format(event[4].hour)}}:{{"{:02}".format(event[4].minute)}}</time>
             </div>
-            {{message}}
-            <button type="submit" class="signup-button"><p class="m-0">SIGNUP</p></button>
-            <a href="/login" class="create-account">Login to existing account</a>
-        </form>
-    </section>
-  </main>
+            <div class="detail-item">
+                <h3>Category</h3>
+                <span>{{event[3]}}</span>
+            </div>
+        </div>
+        <a href='/register/{{event[0]}}'>
+          <button class="register-button" aria-label="Register for this event">
+            <div style="margin-top:-20px;margin-bottom:-35px;">
+              REGISTER NOW
+            </div>
+          </button>
+        </a>
+    </div>
+</main>
 
   <footer class="footer" role="contentinfo">
     <div class="footer-content align-items-center">
@@ -84,13 +106,6 @@
     </div>
   </footer>
   <style>
-    :root {
-      --secondary-bg: rgba(57, 91, 100, 1);
-      --text-color: rgba(255, 255, 255, 1);
-      --input-bg: rgba(217, 217, 217, 1);
-      --border-color: rgba(217, 217, 217, 1);
-    }
-  
     .inria-sans-light {
       font-family: "Inria Sans", serif;
       font-weight: 300;
@@ -158,8 +173,8 @@
       text-decoration: underline;
     }
     
-    
     footer {
+      width:100% !important;
       background-color: #212529;
       text-align: center;
       padding: 10px;
@@ -177,6 +192,7 @@
     
     header {
       font-size: 20px;
+      margin-bottom: -50px;
     }
     
     #logo {
@@ -193,6 +209,9 @@
     }
     
     
+    .my-activity {
+      background-color: #E7F6F214;
+    }
     .footer {
       background-color: #365a64; /* Matches the background color in the image */
       color: white;
@@ -243,88 +262,112 @@
     .contact-email:hover {
       text-decoration: underline;
     }
-    .page-title {
-      font-family: "Jomhuria", sans-serif;
-      text-align: center;
-      font-size: 5rem;
-      margin: 1rem 0 2rem 1.5rem;
-  }
-  
-  .signup-container {
-      border: 1px solid var(--border-color);
-      border-radius: 20px;
-      max-width: 400px;
-      margin: 2rem auto;
-      padding: 2rem;
-  }
-  
-  .signup-title {
-      font-family: 'Jomhuria', sans-serif;
-      font-size: 3rem;
-      text-align: center;
-      margin-bottom: 2rem;
-  }
-  
-  .signup-form {
-      display: flex;
-      flex-direction: column;
-      gap: 1.5rem;
-  }
-  
-  .form-group {
-      display: flex;
-      flex-direction: column;
-      gap: 0.5rem;
-  }
-  
-  label {
-      font-family: 'Inder', sans-serif;
-      font-size: 1rem;
-  }
-  
-  input {
-      height: 46px;
-      background-color: var(--input-bg);
-      border: none;
-      border-radius: 4px;
-      padding: 0 1rem;
-      font-size: 1.125rem;
-  }
-  
-  .signup-button {
-      background-color: var(--secondary-bg);
-      color: var(--text-color);
-      border: none;
-      border-radius: 20px;
-      padding: 1rem;
-      font-family: 'Jomhuria', sans-serif;
-      font-size: 3rem;
-      cursor: pointer;
-      margin-top: 0;
-      height:50px;
-  }
-
-  .signup-button p{
-    margin-top:-20px !important;
-  }
-  
-  .create-account {
-      color: var(--text-color);
-      text-decoration: none;
-      font-size: 0.9375rem;
-      margin-top: 1rem;
-  }
-  
-  .create-account:hover, .create-account:focus {
-      text-decoration: underline;
-  }
-  
-  a {
-    color:white;
-  }
+    
+    a {
+      color:white;
+    }
     a:hover {
       color: #A5C9CA;
     }
+    :root {
+      --primary-bg: rgba(44, 51, 51, 1);
+      --secondary-bg: rgba(57, 91, 100, 1);
+      --text-color: rgba(255, 255, 255, 1);
+      --font-jomhuria: 'Jomhuria', sans-serif;
+      --font-inder: 'Inder', sans-serif;
+      --font-inria: 'Inria Sans', sans-serif;
+      --font-inter: 'Inter', sans-serif;
+  }
+  main {
+    transform:scale(0.7);
+    margin-top:-250px;
+    margin-left:-300px;
+  }
+
+.container {
+    max-width: 1440px;
+    margin: 40px auto;
+    padding: 2rem;
+}
+
+.back-button {
+  background-color: var(--secondary-bg);
+  color: var(--text-color);
+  border: none;
+  border-radius: 20px;
+  padding: 1rem 2.75rem;
+  font-family: var(--font-jomhuria);
+  font-size: 4rem;
+  cursor: pointer;
+  transition: opacity 0.2s;
+}
+
+.back-button:hover {
+    opacity: 0.9;
+}
+
+h1 {
+    font-family: var(--font-jomhuria);
+    font-size: 8rem;
+    margin: 1rem 0;
+}
+
+.event-image {
+    width: 60%;
+    border-radius: 20px;
+    aspect-ratio: 2;
+    object-fit: cover;
+}
+
+h2 {
+    font-family: var(--font-jomhuria);
+    font-size: 6rem;
+    margin: 1rem 0;
+}
+
+.event-description {
+    font-family: var(--font-inder);
+    font-size: 1.5rem;
+    margin: 2rem 0;
+    max-width: 80ch;
+    line-height: 1.6;
+}
+
+.event-details-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 2rem;
+    margin: 2rem 0;
+}
+
+.detail-item h3 {
+    font-family: var(--font-jomhuria);
+    font-size: 6rem;
+    margin-bottom: 1rem;
+}
+
+.detail-item time, .detail-item span {
+    font-family: var(--font-inder);
+    font-size: 1.5rem;
+}
+
+.register-button {
+    background-color: var(--secondary-bg);
+    color: var(--text-color);
+    border: none;
+    border-radius: 20px;
+    padding: 1rem 2.75rem;
+    font-family: var(--font-jomhuria);
+    font-size: 4rem;
+    cursor: pointer;
+    transition: opacity 0.2s;
+    margin: 2rem 0;
+}
+
+.register-button:hover {
+    opacity: 0.9;
+}
+
   </style>
 </body>
 

@@ -47,27 +47,28 @@
       </div>
     </a>
   </header>
-
-  <main role="main">
-    <h1 class="page-title">LOGIN / SIGN UP</h1>
     
-    <section class="signup-container" aria-labelledby="signup-heading">
-        <h2 id="signup-heading" class="signup-title">SIGNUP</h2>
-        <form class="signup-form" action="/api/signup" method="POST">
-            <div class="form-group">
-                <label for="username">Username</label>
-                <input type="text" id="username" name="username" required aria-required="true">
+  <div class="main-container">
+    <h1>MY EVENTS</h1>
+    <div class="event-cards">
+      {% for event in my_events %}
+        <div class="event-card">
+            <img src="{{event[5]}}" alt="Event">
+            <div class="event-content">
+                <div class="event-title">{{event[1]}}</div>
+                <div class="event-description">
+                    {{event[2][:250]+"..."}}
+                </div>
+                <div class="d-flex flex-row">
+                  <a href="/event/{{event[0]}}" class="event-btn">VIEW DETAILS</a>
+                  <a href="/award/{{event[0]}}" class="event-btn">AWARD POINTS</a>
+                </div>
             </div>
-            <div class="form-group">
-                <label for="password">Password</label>
-                <input type="password" id="password" name="password" required aria-required="true">
-            </div>
-            {{message}}
-            <button type="submit" class="signup-button"><p class="m-0">SIGNUP</p></button>
-            <a href="/login" class="create-account">Login to existing account</a>
-        </form>
-    </section>
-  </main>
+        </div>
+        {% endfor %}
+        
+    </div>
+</div>
 
   <footer class="footer" role="contentinfo">
     <div class="footer-content align-items-center">
@@ -84,13 +85,6 @@
     </div>
   </footer>
   <style>
-    :root {
-      --secondary-bg: rgba(57, 91, 100, 1);
-      --text-color: rgba(255, 255, 255, 1);
-      --input-bg: rgba(217, 217, 217, 1);
-      --border-color: rgba(217, 217, 217, 1);
-    }
-  
     .inria-sans-light {
       font-family: "Inria Sans", serif;
       font-weight: 300;
@@ -158,8 +152,8 @@
       text-decoration: underline;
     }
     
-    
     footer {
+      width:100% !important;
       background-color: #212529;
       text-align: center;
       padding: 10px;
@@ -177,6 +171,7 @@
     
     header {
       font-size: 20px;
+      margin-bottom: -50px;
     }
     
     #logo {
@@ -193,6 +188,9 @@
     }
     
     
+    .my-activity {
+      background-color: #E7F6F214;
+    }
     .footer {
       background-color: #365a64; /* Matches the background color in the image */
       color: white;
@@ -243,88 +241,87 @@
     .contact-email:hover {
       text-decoration: underline;
     }
-    .page-title {
-      font-family: "Jomhuria", sans-serif;
-      text-align: center;
-      font-size: 5rem;
-      margin: 1rem 0 2rem 1.5rem;
-  }
-  
-  .signup-container {
-      border: 1px solid var(--border-color);
-      border-radius: 20px;
-      max-width: 400px;
-      margin: 2rem auto;
-      padding: 2rem;
-  }
-  
-  .signup-title {
-      font-family: 'Jomhuria', sans-serif;
-      font-size: 3rem;
-      text-align: center;
-      margin-bottom: 2rem;
-  }
-  
-  .signup-form {
-      display: flex;
-      flex-direction: column;
-      gap: 1.5rem;
-  }
-  
-  .form-group {
-      display: flex;
-      flex-direction: column;
-      gap: 0.5rem;
-  }
-  
-  label {
-      font-family: 'Inder', sans-serif;
-      font-size: 1rem;
-  }
-  
-  input {
-      height: 46px;
-      background-color: var(--input-bg);
-      border: none;
-      border-radius: 4px;
-      padding: 0 1rem;
-      font-size: 1.125rem;
-  }
-  
-  .signup-button {
-      background-color: var(--secondary-bg);
-      color: var(--text-color);
-      border: none;
-      border-radius: 20px;
-      padding: 1rem;
-      font-family: 'Jomhuria', sans-serif;
-      font-size: 3rem;
-      cursor: pointer;
-      margin-top: 0;
-      height:50px;
-  }
-
-  .signup-button p{
-    margin-top:-20px !important;
-  }
-  
-  .create-account {
-      color: var(--text-color);
-      text-decoration: none;
-      font-size: 0.9375rem;
-      margin-top: 1rem;
-  }
-  
-  .create-account:hover, .create-account:focus {
-      text-decoration: underline;
-  }
-  
-  a {
-    color:white;
-  }
+    
+    a {
+      color:white;
+    }
     a:hover {
       color: #A5C9CA;
     }
+    .main-container {
+      padding: 30px;
+      padding-bottom: 20px;
+      text-align: left;
+
+  }
+
+  .main-container h1 {
+      font-size: 85px;
+      margin-bottom: 20px;
+      font-family: "Jomhuria", sans-serif; 
+      padding-top: 35px;
+  }
+
+  .event-cards {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+      gap: 20px;
+      margin-bottom:100px;
+  }
+
+  .event-card {
+      background-color: white;
+      color: black;
+      border-radius: 10px;
+
+      max-width:350px;
+      overflow: hidden;
+      box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+      transition: transform 0.2s;
+  }
+
+  .event-card:hover {
+      transform: scale(1.05);
+  }
+
+  .event-card img {
+      width: 100%;
+      height: 150px;
+      object-fit: cover;
+      transform: scale(1.05);
+  }
+
+  .event-content {
+      padding: 15px;
+  }
+
+  .event-title {
+      font-size: 50px;
+      font-weight: bold;
+      margin-bottom: 10px;
+      font-family: "Jomhuria", sans-serif;
+      line-height:0.8;
+  }
+
+  .event-description {
+      font-size: 14px;
+      margin-bottom: 20px;
+  }
+
+  .event-btn {
+      display: inline-block;
+      padding: 10px 20px;
+      background-color: #1f2529;
+      color: white;
+      text-decoration: none;
+      border-radius: 20px;
+      font-weight: bold;
+      transform:scale(0.9)
+  }
+
+  .event-btn:hover {
+      background-color: #3c4449;
+  }
   </style>
 </body>
 
